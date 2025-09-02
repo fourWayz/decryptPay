@@ -90,5 +90,4 @@ flowchart TD
 
 This repo currently contains **design documentation** and **starter directories** for `frontend/` and `contracts/`.
 
-* `docs/` folder → contains architecture + design diagrams.
 * Full implementation will be delivered in **Wave 2**.
