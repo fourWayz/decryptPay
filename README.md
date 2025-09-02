@@ -4,6 +4,7 @@
 DecryptPay is a decentralized marketplace where creators can **upload encrypted content**, store it permanently on **Filecoin via Synapse**, and sell access using **Filecoin Pay**.  
 Users pay in FIL/USDFC, retrieve files from Filecoin storage, and decrypt them trustlessly — ensuring **creators are paid fairly** and **buyers always get access**.
 
+You can find the full product design doc here: [Notion Link](https://www.notion.so/DecryptPay-Decentralized-Pay-Per-Download-Content-dApp-2621f92f5b51800183d8f75c9955d1d7?source=copy_link)
 ---
 
 ## 🚀 Problem
@@ -62,6 +63,8 @@ flowchart TD
 * **Future or later Contracts**: Marketplace registry + key escrow
 
 ---
+
+
 
 ## 📅 Milestones
 
