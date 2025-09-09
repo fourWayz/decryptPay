@@ -19,6 +19,19 @@ export default function Home() {
       creator: "ChainCoders",
       price: "1.2 FIL",
       usd: "35 USDFC",
+    },  {
+      id: 1,
+      title: "Decentralized Data Science Tutorial",
+      creator: "Jane Doe",
+      price: "0.5 FIL",
+      image: "/file.svg", 
+    },
+    {
+      id: 2,
+      title: "Blockchain UX Design Guide",
+      creator: "John Smith",
+      price: "0.3 FIL",
+      image: "/window.svg",
     },
   
   ];
