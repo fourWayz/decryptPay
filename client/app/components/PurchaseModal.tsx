@@ -4,9 +4,10 @@ interface PurchaseModalProps {
     title: string;
     price: string;
   };
+  isOpen : boolean
 }
 
-export default function PurchaseModal({ onClose, product }: PurchaseModalProps) {
+export default function PurchaseModal({ onClose, product,isOpen }: any) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
       <div className="bg-gray-900 rounded-xl shadow-xl p-6 w-full max-w-lg">
@@ -21,11 +22,11 @@ export default function PurchaseModal({ onClose, product }: PurchaseModalProps) 
         <div className="bg-gray-800 p-4 rounded-lg mb-6">
           <h3 className="font-semibold mb-2">Payment Summary</h3>
           <p>
-            <span className="font-medium">Content Title:</span> {product.title}
+            <span className="font-medium">Content Title:</span> {product?.title}
           </p>
           <p>
             <span className="font-medium">Price:</span>{" "}
-            <span className="text-blue-400">{product.price}</span>
+            <span className="text-blue-400">{product?.price}</span>
           </p>
           <p className="text-gray-400 text-sm mt-1">Estimated Gas Fee: 0.0001 FIL</p>
         </div>
