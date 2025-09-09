@@ -1,4 +1,5 @@
 import { Wallet } from "lucide-react";
+import Link from "next/link";
 
 export default function Navbar() {
   return (
@@ -8,9 +9,9 @@ export default function Navbar() {
         <span className="font-semibold">DecryptPay</span>
       </div>
       <nav className="hidden md:flex gap-6 text-gray-300">
-        <a href="#" className="hover:text-white">Browse</a>
-        <a href="#" className="hover:text-white">Create</a>
-        <a href="#" className="hover:text-white">Dashboard</a>
+        <Link href="/" className="hover:text-white">Browse</Link>
+        <Link href="/create" className="hover:text-white">Create</Link>
+        <Link href="#" className="hover:text-white">Dashboard</Link>
       </nav>
       <button className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700">
         <Wallet size={18}/> Connect Wallet
