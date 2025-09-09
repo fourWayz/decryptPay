@@ -1,27 +1,38 @@
+interface ContentCardProps {
+  image: string;
+  title: string;
+  creator: string;
+  price: string;
+  usd?: string;
+  onBuy?: (product: { title: string; price: string }) => void;
+}
+
 export default function ContentCard({
   image,
   title,
   creator,
   price,
   usd,
-}: {
-  image: string;
-  title: string;
-  creator: string;
-  price: string;
-  usd: string;
-}) {
+  onBuy,
+}: ContentCardProps) {
   return (
-    <div className="bg-gray-900 text-white rounded-xl shadow-lg overflow-hidden">
-      <img src={image} alt={title} className="w-full h-40 object-cover" />
-      <div className="p-4">
-        <h3 className="font-semibold">{title}</h3>
-        <p className="text-sm text-gray-400 mb-2">{creator}</p>
-        <p className="font-medium text-blue-400 mb-4">{price} <span className="text-gray-400 text-sm">({usd})</span></p>
-        <button className="bg-blue-600 w-full py-2 rounded-lg hover:bg-blue-700">
-          Buy
-        </button>
-      </div>
+    <div className="bg-gray-900 rounded-xl shadow-lg p-4 flex flex-col">
+      <img
+        src={image}
+        alt={title}
+        className="rounded-lg mb-4 w-full h-40 object-cover"
+      />
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="text-gray-400 text-sm mb-2">{creator}</p>
+      <p className="text-blue-400 font-medium mb-1">{price}</p>
+      {usd && <p className="text-gray-400 text-sm mb-4">({usd})</p>}
+
+      <button
+        onClick={() => onBuy && onBuy({ title, price })}
+        className="mt-auto bg-blue-600 py-2 rounded-lg hover:bg-blue-700 transition"
+      >
+        Buy
+      </button>
     </div>
   );
 }
