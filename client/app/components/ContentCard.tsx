@@ -6,7 +6,7 @@ interface ContentCardProps {
   creator: string;
   price: string;
   usd?: string;
-  id : number
+  id: number
   onBuy?: (product: { title: string; price: string }) => void;
 }
 
@@ -20,8 +20,8 @@ export default function ContentCard({
   id
 }: ContentCardProps) {
   return (
-    <Link href={`/content/${id}`}>
-      <div className="bg-gray-900 rounded-xl shadow-lg p-4 flex flex-col">
+    <div className="bg-gray-900 rounded-xl shadow-lg p-4 flex flex-col">
+      <Link href={`/content/${id}`}>
         <img
           src={image}
           alt={title}
@@ -31,15 +31,15 @@ export default function ContentCard({
         <p className="text-gray-400 text-sm mb-2">{creator}</p>
         <p className="text-blue-400 font-medium mb-1">{price}</p>
         {usd && <p className="text-gray-400 text-sm mb-4">({usd})</p>}
+      </Link>
 
-        <button
-          onClick={() => onBuy && onBuy({ title, price })}
-          className="mt-auto bg-blue-600 py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          Buy
-        </button>
-      </div>
-    </Link>
+      <button
+        onClick={() => onBuy && onBuy({ title, price })}
+        className="mt-auto bg-blue-600 py-2 rounded-lg hover:bg-blue-700 transition"
+      >
+        Buy
+      </button>
+    </div>
 
   );
 }

@@ -3,6 +3,8 @@
 import { useState, use } from "react";
 import { notFound } from "next/navigation";
 import PurchaseModal from "@/app/components/PurchaseModal";
+import Navbar from "@/app/components/Navbar";
+import Footer from "@/app/components/Footer";
 
 const mockItems = [
   {
@@ -36,10 +38,11 @@ export default function ContentDetail({
 
   const [isModalOpen, setModalOpen] = useState(false);
   const item = mockItems.find((x) => x.id.toString() === id);
-console.log(item)
   if (!item) return notFound();
 
   return (
+    <>
+    <Navbar />
     <div className="bg-black text-white min-h-screen px-6 py-12">
       <div className="max-w-4xl mx-auto">
         <img
@@ -74,8 +77,11 @@ console.log(item)
       <PurchaseModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
-        product={item}
+        item={item}
       />
     </div>
+    <Footer />
+    </>
+
   );
 }

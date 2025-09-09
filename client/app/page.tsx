@@ -15,6 +15,7 @@ export default function Home() {
 
   const items = [
     {
+      id: 1,
       image: "/blog.jpg",
       title: "Decentralized Blog Post Kit",
       creator: "CryptoWriter",
@@ -22,6 +23,7 @@ export default function Home() {
       usd: "15 USDFC",
     },
     {
+      id: 2,
       image: "/smart-contract.jpg",
       title: "Smart Contract Template",
       creator: "ChainCoders",
@@ -29,18 +31,20 @@ export default function Home() {
       usd: "35 USDFC",
     },
     {
-      id: 1,
+      id: 3,
       title: "Decentralized Data Science Tutorial",
       creator: "Jane Doe",
       price: "0.5 FIL",
       image: "/file.svg",
+      usd: "15 USDFC",
     },
     {
-      id: 2,
+      id: 4,
       title: "Blockchain UX Design Guide",
       creator: "John Smith",
       price: "0.3 FIL",
       image: "/window.svg",
+      usd: "10 USDFC",
     },
   ];
 
@@ -51,8 +55,8 @@ export default function Home() {
       <Filters />
       <main className="px-8 py-10 flex-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {items.map((item, i) => (
-            <ContentCard key={i} {...item} onBuy={setSelectedProduct} />
+          {items.map((item) => (
+            <ContentCard key={item.id} {...item} onBuy={setSelectedProduct} />
           ))}
         </div>
         <div className="flex justify-center mt-10">
@@ -65,7 +69,8 @@ export default function Home() {
 
       {selectedProduct && (
         <PurchaseModal
-          product={selectedProduct}
+          isOpen={true}
+          item={selectedProduct}
           onClose={() => setSelectedProduct(null)}
         />
       )}
