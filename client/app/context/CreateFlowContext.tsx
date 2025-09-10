@@ -8,6 +8,7 @@ type CreateFlowData = {
   price?: number;
   title?: string;
   description?: string;
+  image? : File
 };
 
 type CreateFlowContextType = {
