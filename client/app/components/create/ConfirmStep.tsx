@@ -1,81 +1,104 @@
 "use client";
-import { ethers } from "ethers";
-import { Synapse, RPC_URLS } from "@filoz/synapse-sdk";
-import { createClient } from "@supabase/supabase-js";
+import { useState } from "react";
+import { useCreateFlow } from "@/app/context/CreateFlowContext";
 
-interface ConfirmStepProps {
-  file: File | null;
-  encryptedFile: Uint8Array | null;
-  encKey: string | null;
-  title: string;
-  description: string;
-  price: string;
-  onPrev: () => void;
-}
+export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
+  const { data } = useCreateFlow();
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY!
-);
+  const verifyDecryption = async () => {
+    if (!data.encryptedFile || !data.encryptionKey) return;
 
-export default function ConfirmStep({
-  file,
-  encryptedFile,
-  encKey,
-  title,
-  description,
-  price,
-  onPrev,
-}: ConfirmStepProps) {
-  const handleConfirm = async () => {
-    if (!file || !encryptedFile) return;
-
+    setVerifying(true);
+    setError(null);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const synapse = await Synapse.create({ provider });
+      // Read encrypted blob
+      const arrayBuffer = await data.encryptedFile.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
 
-      // Upload encrypted file
-      const uploadResult = await synapse.storage.upload(encryptedFile);
-      const cid = uploadResult.pieceCid;
+      // First 12 bytes = IV
+      const iv = bytes.slice(0, 12);
+      const ciphertext = bytes.slice(12);
 
-      // Save metadata in Supabase
-      await supabase.from("listings").insert([
-        {
-          title,
-          description,
-          price,
-          cid,
-          enc_key: encKey,
-          creator: await provider.getAddress(),
-        },
-      ]);
+      // Import the base64 key
+      const rawKey = Uint8Array.from(atob(data.encryptionKey), c => c.charCodeAt(0));
+      const key = await crypto.subtle.importKey(
+        "raw",
+        rawKey,
+        { name: "AES-GCM" },
+        false,
+        ["decrypt"]
+      );
 
-      alert("File uploaded & metadata saved!");
+      // Attempt decryption
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        key,
+        ciphertext
+      );
+
+      setVerified(true);
     } catch (err) {
-      console.error(err);
-      alert("Error: " + (err as any).message);
+      console.error("Decryption failed:", err);
+      setError("Decryption failed. Please retry encryption.");
+    } finally {
+      setVerifying(false);
     }
+  };
+
+  const handleSubmit = async () => {
+    // Later we will integrate Supabase + Synapse SDK upload here
+    alert("✅ Confirmed! Ready to upload to storage/payment flow.");
   };
 
   return (
     <div className="bg-gray-900 p-6 rounded-2xl shadow-lg">
-      <h2 className="text-xl font-semibold mb-4">Confirm & Sign</h2>
-      <p><strong>Title:</strong> {title}</p>
-      <p><strong>Description:</strong> {description}</p>
-      <p><strong>Price:</strong> {price} FIL</p>
-      <p><strong>File:</strong> {file?.name}</p>
+      <h2 className="text-xl font-bold mb-4">Confirm & Sign</h2>
 
-      <div className="flex justify-between mt-6">
-        <button onClick={onPrev} className="bg-gray-700 px-6 py-2 rounded-lg">
-          Back
-        </button>
-        <button
-          onClick={handleConfirm}
-          className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg"
-        >
-          Confirm & Upload
-        </button>
-      </div>
+      {!verified ? (
+        <>
+          <p className="mb-4">
+            Before finalizing, we’ll verify your encrypted file can be decrypted.
+          </p>
+          <div className="flex space-x-4">
+            <button
+              onClick={onPrev}
+              className="bg-gray-700 px-4 py-2 rounded-lg"
+              disabled={verifying}
+            >
+              Back
+            </button>
+            <button
+              onClick={verifyDecryption}
+              className="bg-blue-500 px-4 py-2 rounded-lg"
+              disabled={verifying}
+            >
+              {verifying ? "Verifying..." : "Verify Encryption"}
+            </button>
+          </div>
+          {error && <p className="mt-4 text-red-400">{error}</p>}
+        </>
+      ) : (
+        <>
+          <p className="text-green-400 mb-4">✅ Encryption verified successfully!</p>
+          <div className="flex space-x-4">
+            <button
+              onClick={onPrev}
+              className="bg-gray-700 px-4 py-2 rounded-lg"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="bg-green-500 px-4 py-2 rounded-lg"
+            >
+              Confirm & Upload
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
