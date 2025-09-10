@@ -1,28 +1,58 @@
-type Props = { onNext: () => void; onPrev: () => void };
+"use client";
+import { Dispatch, SetStateAction } from "react";
 
-export default function EncryptStep({ onNext, onPrev }: Props) {
+interface EncryptStepProps {
+  file: File | null;
+  encryptedFile: Uint8Array | null;
+  setEncryptedFile: Dispatch<SetStateAction<Uint8Array | null>>;
+  setEncKey: Dispatch<SetStateAction<string | null>>;
+  onNext: () => void;
+  onPrev: () => void;
+}
+
+export default function EncryptStep({
+  file,
+  encryptedFile,
+  setEncryptedFile,
+  setEncKey,
+  onNext,
+  onPrev,
+}: EncryptStepProps) {
+  const handleEncrypt = async () => {
+    if (!file) return;
+
+    // Dummy encryption for now
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const key = "dummy-key-" + Date.now();
+
+    setEncryptedFile(buffer);
+    setEncKey(key);
+  };
+
   return (
-    <div className="bg-gray-900 p-8 rounded-xl shadow-lg">
-      <h2 className="text-xl font-semibold mb-6">Encryption</h2>
-      <p className="text-gray-400 mb-4">
-        Choose your encryption settings before publishing.
-      </p>
-      <div className="space-y-3">
-        <label className="flex items-center space-x-2">
-          <input type="checkbox" className="form-checkbox text-blue-500" />
-          <span>Encrypt file content</span>
-        </label>
-        <label className="flex items-center space-x-2">
-          <input type="checkbox" className="form-checkbox text-blue-500" />
-          <span>Password protection</span>
-        </label>
-      </div>
-      <div className="flex justify-between mt-6">
-        <button onClick={onPrev} className="px-6 py-2 bg-gray-700 rounded-md hover:bg-gray-800">
-          Previous
+    <div className="bg-gray-900 p-6 rounded-2xl shadow-lg">
+      <h2 className="text-xl font-semibold mb-4">Encryption</h2>
+      {!encryptedFile ? (
+        <button
+          onClick={handleEncrypt}
+          className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg"
+        >
+          Encrypt File
         </button>
-        <button onClick={onNext} className="px-6 py-2 bg-blue-600 rounded-md hover:bg-blue-700">
-          Next Step
+      ) : (
+        <p className="text-green-400 mb-4">File encrypted successfully ✅</p>
+      )}
+
+      <div className="flex justify-between mt-6">
+        <button onClick={onPrev} className="bg-gray-700 px-6 py-2 rounded-lg">
+          Back
+        </button>
+        <button
+          onClick={onNext}
+          disabled={!encryptedFile}
+          className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg disabled:opacity-50"
+        >
+          Next
         </button>
       </div>
     </div>

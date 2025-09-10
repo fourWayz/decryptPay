@@ -1,18 +1,29 @@
-type Props = { onNext: () => void };
+"use client";
+import { Dispatch, SetStateAction } from "react";
 
-export default function UploadStep({ onNext }: Props) {
+interface UploadStepProps {
+  file: File | null;
+  setFile: Dispatch<SetStateAction<File | null>>;
+  onNext: () => void;
+}
+
+export default function UploadStep({ file, setFile, onNext }: UploadStepProps) {
   return (
-    <div className="bg-gray-900 p-8 rounded-xl shadow-lg">
-      <h2 className="text-xl font-semibold mb-6">Upload Your Digital Content</h2>
-      <div className="border-2 border-dashed border-gray-600 rounded-lg h-48 flex flex-col items-center justify-center">
-        <span className="text-gray-400">Drag & Drop Your File Here</span>
-        <button className="mt-3 px-4 py-2 bg-gray-700 rounded-md">Browse Files</button>
-      </div>
-      <div className="flex justify-end mt-6">
-        <button onClick={onNext} className="px-6 py-2 bg-blue-600 rounded-md hover:bg-blue-700">
-          Next Step
-        </button>
-      </div>
+    <div className="bg-gray-900 p-6 rounded-2xl shadow-lg">
+      <h2 className="text-xl font-semibold mb-4">Upload File</h2>
+      <input
+        type="file"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        className="mb-4"
+      />
+      {file && <p className="text-sm text-green-400">Selected: {file.name}</p>}
+      <button
+        onClick={onNext}
+        disabled={!file}
+        className="mt-4 bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg disabled:opacity-50"
+      >
+        Next
+      </button>
     </div>
   );
 }
