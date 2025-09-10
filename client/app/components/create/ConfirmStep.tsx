@@ -2,101 +2,98 @@
 import { useState } from "react";
 import { useCreateFlow } from "@/app/context/CreateFlowContext";
 import { supabase } from "@/lib/supabaseClient";
+import { Synapse } from "@filoz/synapse-sdk"; 
+import { useRouter } from "next/navigation";
+import { ethers } from "ethers";
 
 export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
   const { data } = useCreateFlow();
-  const [uploading, setUploading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = async () => {
-    if (!data.encryptedFile || !data.title || !data.price || !data.image) {
-      setError("Missing required data.");
+  const handleConfirm = async () => {
+    if (!data.encryptedFile || !data.file || !data.image) {
+      alert("Missing file or image");
       return;
     }
 
-    setUploading(true);
-    setError(null);
+    setLoading(true);
 
     try {
-      // Upload encrypted file to Supabase Storage
-      const fileName = `${Date.now()}-${data.file?.name || "content.enc"}`;
-      const imageName = `${Date.now()}-${data.image?.name || "cover.png"}`;
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      console.log(provider,'ii')
+      const synapse = await Synapse.create({ provider })
 
-//       await supabase.storage.createBucket('images', {
-//   public: true,
-//   fileSizeLimit: 10485760, // 10MB
-//   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif']
-// })
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from("content")
-        .upload(fileName, data.encryptedFile);
+      // 1️⃣ Upload encrypted file to Filecoin via Synapse
+      // const synapse = new Synapse({ network: "testnet" }); // adjust config
+      const uploadRes = await synapse.storage.upload(data.encryptedFile);
+      const fileCid = uploadRes?.pieceCid; // Synapse should return CID
+      console.log(fileCid)
 
-      const { data: imageData, error: imageError } = await supabase.storage
+      if (!fileCid) throw new Error("Failed to upload to Filecoin Synapse");
+
+      // 2️⃣ Upload thumbnail image to Supabase storage
+      const fileName = `${Date.now()}-${data.image.name}`;
+      const { data: storageRes, error: storageError } = await supabase.storage
         .from("thumbnails")
-        .upload(imageName, data.image);
-
-      if (imageError) throw imageError;
+        .upload(fileName, data.image);
 
       if (storageError) throw storageError;
 
-      const filePath = storageData.path;
-      const imagePath = imageData.path;
+      const thumbnailPath = storageRes.path;
 
-      // Insert metadata into Supabase DB
-      const { error: dbError } = await supabase.from("products").insert([
+      // 3️⃣ Save metadata in Supabase DB
+      const { error: dbError } = await supabase.from("contents").insert([
         {
           title: data.title,
           description: data.description,
           price: data.price,
-          file_path: filePath,
-          thumbnail_path: imagePath,
-          encryption_key: data.encryptionKey,
-          creator: "demo-user",
+          file_cid: fileCid,
+          thumbnail_path: thumbnailPath,
+          creator: "Anonymous",
         },
       ]);
 
       if (dbError) throw dbError;
 
-      setSuccess(true);
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      setError(err.message || "Something went wrong.");
+      alert("Upload successful ✅");
+      router.push("/"); // redirect to homepage
+    } catch (err) {
+      console.error("Error confirming upload:", err);
+      alert("Upload failed ❌");
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-gray-900 p-6 rounded-2xl shadow-lg">
-      <h2 className="text-xl font-bold mb-4">Confirm & Upload</h2>
+    <div className="bg-gray-900 p-6 rounded-lg">
+      <h2 className="text-xl font-semibold mb-4">Confirm & Upload</h2>
 
-      {!success ? (
-        <>
-          <p className="mb-4 text-gray-300">
-            We’ll now upload your encrypted file and save its details securely.
-          </p>
-          <div className="flex space-x-4">
-            <button
-              onClick={onPrev}
-              className="bg-gray-700 px-4 py-2 rounded-lg"
-              disabled={uploading}
-            >
-              Back
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="bg-green-500 px-4 py-2 rounded-lg"
-              disabled={uploading}
-            >
-              {uploading ? "Uploading..." : "Confirm & Upload"}
-            </button>
-          </div>
-          {error && <p className="mt-4 text-red-400">{error}</p>}
-        </>
-      ) : (
-        <p className="text-green-400">✅ Upload successful! Your content is now live.</p>
-      )}
+      <div className="mb-6 space-y-2">
+        <p><strong>Title:</strong> {data.title}</p>
+        <p><strong>Description:</strong> {data.description}</p>
+        <p><strong>Price:</strong> {data.price} FIL</p>
+        <p><strong>File:</strong> {data.file?.name}</p>
+        <p><strong>Thumbnail:</strong> {data.image?.name}</p>
+      </div>
+
+      <div className="flex space-x-4">
+        <button
+          onClick={onPrev}
+          className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600"
+          disabled={loading}
+        >
+          Back
+        </button>
+        <button
+          onClick={handleConfirm}
+          className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700"
+          disabled={loading}
+        >
+          {loading ? "Uploading..." : "Confirm & Upload"}
+        </button>
+      </div>
     </div>
   );
 }

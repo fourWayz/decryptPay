@@ -3,7 +3,7 @@ import { createContext, useContext, useState, ReactNode } from "react";
 
 type CreateFlowData = {
   file?: File;
-  encryptedFile?: Blob;
+  encryptedFile?: any;
   encryptionKey?: string;
   price?: number;
   title?: string;
