@@ -12,26 +12,29 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
+    useFileUpload();
+
+  const { isPending: isUploading, mutateAsync: uploadFile } =
+    uploadFileMutation;
+
   const handleConfirm = async () => {
     if (!data.encryptedFile || !data.file || !data.image) {
       alert("Missing file or image");
-      console.log(data.encryptedFile, data.file)
       return;
     }
+      console.log(data.encryptedFile, data.file)
+
 
     setLoading(true);
 
     try {
-
-      const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
-        useFileUpload();
-
-      const { isPending: isUploading, mutateAsync: uploadFile } =
-        uploadFileMutation;
-      await uploadFile(data.encryptedFile);
-
-      const fileCid = uploadedInfo?.pieceCid; // Synapse should return CID
-      console.log(fileCid)
+ 
+     const uploadResult = await uploadFile(data.encryptedFile);
+      console.log(uploadResult, 'upload result');
+      
+      const fileCid = uploadResult?.pieceCid; // Use the result from the mutation, not the state
+      console.log('File CID:', fileCid);
 
       if (!fileCid) throw new Error("Failed to upload to Filecoin Synapse");
 

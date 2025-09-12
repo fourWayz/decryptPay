@@ -8,6 +8,8 @@ import { createConfig, http } from 'wagmi'
 import { filecoin, filecoinCalibration } from 'viem/chains'
 import { injected, walletConnect } from 'wagmi/connectors'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ConfettiProvider } from "@/providers/ConfettiProvider";
+import { SynapseProvider } from "@/providers/SynapseProvider";
 
 const queryClient = new QueryClient()
 const wagmiConfig = createConfig({
@@ -31,14 +33,17 @@ export default function RootLayout({
     return (
         <html lang="en" >
             <body className="bg-black">
-                <WagmiProvider config={wagmiConfig}>
-                    <QueryClientProvider client={queryClient}>
-                        <RainbowKitProvider>
-                            {children}
-                        </RainbowKitProvider>
-                    </QueryClientProvider>
-                </WagmiProvider>
-
+                <ConfettiProvider>
+                    <WagmiProvider config={wagmiConfig}>
+                        <QueryClientProvider client={queryClient}>
+                            <RainbowKitProvider>
+                                <SynapseProvider>
+                                    {children}
+                                </SynapseProvider>
+                            </RainbowKitProvider>
+                        </QueryClientProvider>
+                    </WagmiProvider>
+                </ConfettiProvider>
             </body>
         </html>
     );
