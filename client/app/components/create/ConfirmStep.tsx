@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { useCreateFlow } from "@/app/context/CreateFlowContext";
 import { supabase } from "@/lib/supabaseClient";
-import { Synapse } from "@filoz/synapse-sdk"; 
+import { Synapse } from "@filoz/synapse-sdk";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
-
+import { TOKENS, CONTRACT_ADDRESSES } from '@filoz/synapse-sdk'
+import { useFileUpload } from "@/hooks/useFileUpload";
 export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
   const { data } = useCreateFlow();
   const [loading, setLoading] = useState(false);
@@ -14,20 +15,22 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
   const handleConfirm = async () => {
     if (!data.encryptedFile || !data.file || !data.image) {
       alert("Missing file or image");
+      console.log(data.encryptedFile, data.file)
       return;
     }
 
     setLoading(true);
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      console.log(provider,'ii')
-      const synapse = await Synapse.create({ provider })
 
-      // 1️⃣ Upload encrypted file to Filecoin via Synapse
-      // const synapse = new Synapse({ network: "testnet" }); // adjust config
-      const uploadRes = await synapse.storage.upload(data.encryptedFile);
-      const fileCid = uploadRes?.pieceCid; // Synapse should return CID
+      const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
+        useFileUpload();
+
+      const { isPending: isUploading, mutateAsync: uploadFile } =
+        uploadFileMutation;
+      await uploadFile(data.encryptedFile);
+
+      const fileCid = uploadedInfo?.pieceCid; // Synapse should return CID
       console.log(fileCid)
 
       if (!fileCid) throw new Error("Failed to upload to Filecoin Synapse");

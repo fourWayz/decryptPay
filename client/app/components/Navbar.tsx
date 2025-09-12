@@ -1,4 +1,5 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Divide } from "lucide-react";
 import Link from "next/link";
 
 export default function Navbar() {
@@ -13,9 +14,9 @@ export default function Navbar() {
         <Link href="/create" className="hover:text-white">Create</Link>
         <Link href="#" className="hover:text-white">Dashboard</Link>
       </nav>
-      <button className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700">
+      <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700">
         <ConnectButton chainStatus="icon" accountStatus="address" />
-      </button>
+      </div>
     </header>
   );
 }
