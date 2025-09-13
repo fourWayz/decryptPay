@@ -128,7 +128,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
       Swal.close();
       showSuccessAlert();
 
-    } catch (err) {
+    } catch (err:any) {
       console.error("Error confirming upload:", err);
       Swal.close();
       showErrorAlert(err.message || "Upload failed. Please try again.");
