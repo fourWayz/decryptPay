@@ -12,6 +12,7 @@ export default function Home() {
   const [selectedProduct, setSelectedProduct] = useState<null | {
     title: string;
     price: string;
+    creator: `0x${string}`
   }>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -6,22 +6,22 @@ import {
   usePublicClient,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useReadContract,
 } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ethers } from "ethers";
-
 import FilecoinPayABI from "@/lib/abi.json";
 
-const CONTRACT_ADDRESS = "0xEC9c324a6136B055eC653a15A9116f77cc152f26"; // Calibration
-const TOKEN_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0";
+const CONTRACT_ADDRESS = "0xEC9c324a6136B055eC653a15A9116f77cc152f26"; // Payments contract on Calibration
+const TOKEN_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0"; // tFIL ERC20
 
 type PurchaseModalProps = {
   isOpen: boolean;
   onClose: () => void;
   item: {
     title: string;
-    price: string; // e.g. "3 tFIL"
-    creator: `0x${string}`; // payee
+    price: string; // e.g. "0.3 tFIL"
+    creator: `0x${string}`; // Payee
   };
 };
 
@@ -33,61 +33,84 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
 
   const [txHash, setTxHash] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [approvalHash, setApprovalHash] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState(false);
 
   const { isLoading: isTxPending } = useWaitForTransactionReceipt({
     hash: txHash as `0x${string}`,
   });
 
-  if (!isOpen) return null;
+  const { isLoading: isApprovalPending } = useWaitForTransactionReceipt({
+    hash: approvalHash as `0x${string}`,
+  });
 
-  // Extract numeric price
+  // Check current allowance
+  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
+    address: TOKEN_ADDRESS as `0x${string}`,
+    abi: [
+      {
+        name: "allowance",
+        type: "function",
+        stateMutability: "view",
+        inputs: [
+          { name: "owner", type: "address" },
+          { name: "spender", type: "address" },
+        ],
+        outputs: [{ name: "", type: "uint256" }],
+      },
+    ],
+    functionName: "allowance",
+    args: [address as `0x${string}`, CONTRACT_ADDRESS as `0x${string}`],
+    query: {
+      enabled: !!address && isOpen,
+    },
+  });
+
+    // Extract numeric price
   const extractNumericValue = (priceString: string): string => {
     const match = priceString.match(/(\d+\.?\d*)/);
     return match ? match[0] : "0";
   };
   const numericPrice = extractNumericValue(item.price);
-  const priceInWei = ethers.parseEther(numericPrice);
+  const priceInWei = ethers.parseEther(numericPrice); // convert tFIL amount to wei
 
-  // Step 0: check approval
   useEffect(() => {
-    async function checkApproval() {
-      if (!address) return;
-      try {
-        const approval: any = await publicClient?.readContract({
-          address: CONTRACT_ADDRESS as `0x${string}`,
-          abi: FilecoinPayABI,
-          functionName: "operatorApprovals",
-          args: [TOKEN_ADDRESS, address, address],
-        });
-        setIsApproved(approval?.isApproved ?? false);
-      } catch (err) {
-        console.error("Approval check failed:", err);
-      }
+    if (currentAllowance !== undefined) {
+      const hasSufficientAllowance = BigInt(currentAllowance as unknown as bigint) >= priceInWei;
+      setIsApproved(hasSufficientAllowance);
     }
-    checkApproval();
-  }, [walletClient, address]);
+  }, [currentAllowance, priceInWei]);
 
-  // Step 1: grant approval
-  async function handleGrantApproval() {
+  if (!isOpen) return null;
+
+
+  // Step 1: Approve tokens
+  async function handleApprove() {
     if (!walletClient || !address) return;
     setLoading(true);
     try {
       const hash = await writeContractAsync({
-        address: CONTRACT_ADDRESS as `0x${string}`,
-        abi: FilecoinPayABI,
-        functionName: "setOperatorApproval",
-        args: [
-          TOKEN_ADDRESS,
-          address, // operator
-          true,
-          ethers.MaxUint256,
-          ethers.MaxUint256,
-          0,
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: [
+          // Minimal ERC20 ABI
+          {
+            name: "approve",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [
+              { name: "spender", type: "address" },
+              { name: "amount", type: "uint256" },
+            ],
+            outputs: [{ name: "", type: "bool" }],
+          },
         ],
+        functionName: "approve",
+        args: [CONTRACT_ADDRESS, priceInWei],
       });
+      setApprovalHash(hash);
       await publicClient?.waitForTransactionReceipt({ hash });
-      setIsApproved(true);
+      await refetchAllowance(); // Refresh allowance after approval
+      alert("Approval successful ✅");
     } catch (err: any) {
       console.error("Approval error:", err);
       alert("Approval failed: " + (err.message || err));
@@ -96,79 +119,22 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
     }
   }
 
-  // Utility: fetch existing railId if exists
-  async function findExistingRail(): Promise<any | null> {
-    try {
-      const railId = await publicClient?.readContract({
-        address: CONTRACT_ADDRESS as `0x${string}`,
-        abi: FilecoinPayABI,
-        functionName: "getRailId", // adjust if repo uses different getter
-        args: [TOKEN_ADDRESS, address, item.creator],
-      });
-      return railId ?? null;
-    } catch {
-      return null; // means no existing rail
-    }
-  }
-
-  // Step 2-3: handle payment
-  async function handleConfirmPayment() {
+  // Step 2: Deposit to creator
+  async function handleDeposit() {
     if (!walletClient || !address) return;
     setLoading(true);
-
     try {
-      let railId = await findExistingRail();
-
-      // If no rail, create one first
-      if (!railId) {
-        const hash1 = await writeContractAsync({
-          address: CONTRACT_ADDRESS as `0x${string}`,
-          abi: FilecoinPayABI,
-          functionName: "createRail",
-          args: [
-            TOKEN_ADDRESS,
-            address,
-            item.creator,
-            ethers.ZeroAddress, // validator
-            0, // commission
-            address, // operator
-          ],
-        });
-        const receipt1 = await publicClient?.waitForTransactionReceipt({ hash: hash1 });
-
-        const event = receipt1?.logs.find(
-          (log: any) =>
-            log.topics[0] ===
-            ethers.id("RailCreated(uint256,address,address,address,address,uint16,address)")
-        );
-        if (!event) throw new Error("RailCreated event not found");
-
-        const iface = new ethers.Interface(FilecoinPayABI);
-        const decoded = iface.parseLog(event);
-        railId = decoded?.args.railId;
-      }
-
-      if (!railId) throw new Error("Could not resolve railId");
-
-      // Lock funds
-      const hash2 = await writeContractAsync({
+      const hash = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: FilecoinPayABI,
-        functionName: "modifyRailLockup",
-        args: [railId, 0, priceInWei],
-        value: priceInWei,
+        functionName: "deposit",
+        args: [TOKEN_ADDRESS, item.creator, priceInWei],
+        value : priceInWei
       });
-      await publicClient?.waitForTransactionReceipt({ hash: hash2 });
-
-      // Release payment
-      const hash3 = await writeContractAsync({
-        address: CONTRACT_ADDRESS as `0x${string}`,
-        abi: FilecoinPayABI,
-        functionName: "modifyRailPayment",
-        args: [railId, 0, priceInWei],
-      });
-      setTxHash(hash3);
-      await publicClient?.waitForTransactionReceipt({ hash: hash3 });
+      setTxHash(hash);
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
+      console.log(receipt,'rcp')
+      alert("Payment successful 🎉");
     } catch (err: any) {
       console.error("Payment error:", err);
       alert("Payment failed: " + (err.message || err));
@@ -176,6 +142,8 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
       setLoading(false);
     }
   }
+
+  const isLoading = loading || isTxPending || isApprovalPending;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -213,15 +181,13 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
         <div className="bg-gray-800 rounded-lg p-4 mb-6">
           <p className="font-semibold mb-2">Status</p>
           <p className="text-sm text-gray-400">
-            {loading
+            {isLoading
               ? "🔄 Processing…"
-              : isTxPending
-              ? "⏳ Waiting confirmation…"
               : txHash
               ? "✅ Payment complete"
               : isApproved
-              ? "Ready to pay"
-              : "Approval required"}
+              ? "✅ Approved - Ready to pay"
+              : "Ready to approve and deposit"}
           </p>
           {txHash && (
             <p className="text-blue-400 text-xs mt-2">
@@ -240,28 +206,29 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
           <button
             onClick={onClose}
             className="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600"
-            disabled={loading || isTxPending}
+            disabled={isLoading}
           >
             Cancel
           </button>
           {!isConnected ? (
             <ConnectButton />
-          ) : !isApproved ? (
-            <button
-              onClick={handleGrantApproval}
-              disabled={loading || isTxPending}
-              className="bg-purple-600 px-6 py-2 rounded-lg hover:bg-purple-500"
-            >
-              {loading ? "Processing…" : "Grant Approval"}
-            </button>
           ) : (
-            <button
-              onClick={handleConfirmPayment}
-              disabled={loading || isTxPending}
-              className="bg-blue-600 px-6 py-2 rounded-lg hover:bg-blue-500"
-            >
-              {loading ? "Processing…" : "Confirm Payment"}
-            </button>
+            <>
+              <button
+                onClick={handleApprove}
+                disabled={isLoading || isApproved}
+                className="bg-purple-600 px-6 py-2 rounded-lg hover:bg-purple-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
+              >
+                {isApproved ? "Approved" : "Approve"}
+              </button>
+              <button
+                onClick={handleDeposit}
+                disabled={isLoading || !isApproved}
+                className="bg-blue-600 px-6 py-2 rounded-lg hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
+              >
+                Pay
+              </button>
+            </>
           )}
         </div>
       </div>

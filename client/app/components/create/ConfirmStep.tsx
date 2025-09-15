@@ -8,11 +8,13 @@ import { ethers } from "ethers";
 import { TOKENS, CONTRACT_ADDRESSES } from '@filoz/synapse-sdk'
 import { useFileUpload } from "@/hooks/useFileUpload";
 import Swal from 'sweetalert2';
+import { useAccount } from "wagmi";
 
 export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
   const { data } = useCreateFlow();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+    const { address, isConnected } = useAccount();
 
   const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
     useFileUpload();
@@ -118,7 +120,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
           price: data.price,
           file_cid: fileCid,
           thumbnail_path: thumbnailPath,
-          creator: "Anonymous",
+          creator: address,
         },
       ]);
 
