@@ -20,6 +20,7 @@ interface ContentItem {
   thumbnail_path: string;
   file_cid: string;
   encryption_key?: string;
+  file_name? : string
 }
 
 export default function ContentDetail({
@@ -147,10 +148,10 @@ export default function ContentDetail({
         return;
       }
 
-      // Fetch encryption key & file_cid from DB (you may not want to expose encryption_key directly; this is MVP)
+      // Fetch encryption key & file_cid from DB 
       const { data: contentRow, error } = await supabase
         .from("products")
-        .select("encryption_key, file_cid")
+        .select("encryption_key, file_cid,file_name")
         .eq("id", id)
         .single();
 
@@ -158,7 +159,7 @@ export default function ContentDetail({
 
       const encKey = contentRow.encryption_key;
       const fileCid = contentRow.file_cid;
-      const fileName = `${item.title}.rtf`;
+      const fileName = contentRow.file_name || `${item.title}.bin`;
 
       if (!encKey || !fileCid) throw new Error("Missing encryption key or CID");
 
