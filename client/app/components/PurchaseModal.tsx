@@ -11,17 +11,25 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ethers } from "ethers";
 import FilecoinPayABI from "@/lib/abi.json";
+import { supabase } from "@/lib/supabaseClient";
+import { Address } from "viem";
+import Swal from 'sweetalert2';
+
 
 const CONTRACT_ADDRESS = "0xEC9c324a6136B055eC653a15A9116f77cc152f26"; // Payments contract on Calibration
-const TOKEN_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0"; // tFIL ERC20
+const TOKEN_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0"; // USDFC ERC20
 
 type PurchaseModalProps = {
   isOpen: boolean;
   onClose: () => void;
   item: {
+    id: number;
     title: string;
-    price: string; // e.g. "0.3 tFIL"
-    creator: `0x${string}`; // Payee
+    creator: string;
+    price: string;
+    usd?: string;
+    description?: string;
+    thumbnail_path: string;
   };
 };
 
@@ -46,7 +54,7 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
 
   // Check current allowance
   const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
-    address: TOKEN_ADDRESS as `0x${string}`,
+    address: ethers.ZeroAddress as Address,
     abi: [
       {
         name: "allowance",
@@ -66,33 +74,26 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
     },
   });
 
-    // Extract numeric price
-  const extractNumericValue = (priceString: string): string => {
-    const match = priceString.match(/(\d+\.?\d*)/);
-    return match ? match[0] : "0";
-  };
-  const numericPrice = extractNumericValue(item.price);
-  const priceInWei = ethers.parseEther(numericPrice); // convert tFIL amount to wei
-
-  useEffect(() => {
-    if (currentAllowance !== undefined) {
-      const hasSufficientAllowance = BigInt(currentAllowance as unknown as bigint) >= priceInWei;
-      setIsApproved(hasSufficientAllowance);
-    }
-  }, [currentAllowance, priceInWei]);
+  // // Extract numeric price
+  // const extractNumericValue = (priceString: string): string => {
+  //   const match = priceString.match(/(\d+\.?\d*)/);
+  //   return match ? match[0] : "0";
+  // };
+  const numericPrice = item.price
+  const priceInWei = ethers.parseEther(item.price.toString()); // convert tFIL amount to wei
 
   if (!isOpen) return null;
 
 
-  // Step 1: Approve tokens
+  // Approve tokens
   async function handleApprove() {
     if (!walletClient || !address) return;
     setLoading(true);
     try {
       const hash = await writeContractAsync({
-        address: TOKEN_ADDRESS as `0x${string}`,
+        address: ethers.ZeroAddress as Address,
         abi: [
-          // Minimal ERC20 ABI
+
           {
             name: "approve",
             type: "function",
@@ -109,17 +110,26 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
       });
       setApprovalHash(hash);
       await publicClient?.waitForTransactionReceipt({ hash });
+      setIsApproved(true)
       await refetchAllowance(); // Refresh allowance after approval
-      alert("Approval successful ✅");
+      Swal.fire({
+        title: 'Success',
+        text: 'Approval successful',
+        icon: 'success',
+      });
     } catch (err: any) {
       console.error("Approval error:", err);
-      alert("Approval failed: " + (err.message || err));
+      Swal.fire({
+        title: 'Approval failed',
+        text: err.message,
+        icon: 'error',
+      });
     } finally {
       setLoading(false);
     }
   }
 
-  // Step 2: Deposit to creator
+  //  Deposit to the contract for creator
   async function handleDeposit() {
     if (!walletClient || !address) return;
     setLoading(true);
@@ -128,16 +138,45 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: FilecoinPayABI,
         functionName: "deposit",
-        args: [TOKEN_ADDRESS, item.creator, priceInWei],
-        value : priceInWei
+        args: [ethers.ZeroAddress, item.creator, priceInWei],
+        value: priceInWei
       });
       setTxHash(hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log(receipt,'rcp')
-      alert("Payment successful 🎉");
+      console.log(receipt)
+      //  Save purchase to Supabase
+      const { error } = await supabase.from("purchases").insert({
+        content_id: item.id,
+        buyer_address: address,
+        creator_address: item.creator,
+        price: numericPrice,
+        tx_hash: hash,
+        status: "completed",
+      });
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        Swal.fire({
+          title: 'Database Error',
+          text: 'Payment succeeded but saving to DB failed',
+          icon: 'error',
+        });
+      } else {
+        Swal.fire({
+          title: 'Success',
+          text: 'Payment successful',
+          icon: 'success',
+        });
+
+        onClose()
+      }
     } catch (err: any) {
       console.error("Payment error:", err);
-      alert("Payment failed: " + (err.message || err));
+      Swal.fire({
+        title: 'Payment failed',
+        text: err.message,
+        icon: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -184,10 +223,10 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
             {isLoading
               ? "🔄 Processing…"
               : txHash
-              ? "✅ Payment complete"
-              : isApproved
-              ? "✅ Approved - Ready to pay"
-              : "Ready to approve and deposit"}
+                ? "✅ Payment complete"
+                : isApproved
+                  ? "✅ Approved - Ready to pay"
+                  : "Ready to approve and deposit"}
           </p>
           {txHash && (
             <p className="text-blue-400 text-xs mt-2">

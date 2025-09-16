@@ -10,9 +10,13 @@ import { supabase } from "@/lib/supabaseClient";
 
 export default function Home() {
   const [selectedProduct, setSelectedProduct] = useState<null | {
+    id: number;
     title: string;
+    creator: string;
     price: string;
-    creator: `0x${string}`
+    usd?: string;
+    description?: string;
+    thumbnail_path: string;
   }>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
