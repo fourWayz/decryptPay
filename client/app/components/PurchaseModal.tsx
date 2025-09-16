@@ -203,7 +203,7 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
           <p className="text-sm text-gray-400">Content Title:</p>
           <p className="font-semibold">{item.title}</p>
           <p className="mt-2 text-sm text-gray-400">Price:</p>
-          <p className="text-blue-400">{item.price}</p>
+          <p className="text-blue-400">{item.price} tFIL</p>
         </div>
 
         <div className="bg-gray-800 rounded-lg p-4 mb-4">

@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useCreateFlow } from "@/app/context/CreateFlowContext";
 import { supabase } from "@/lib/supabaseClient";
-import { Synapse } from "@filoz/synapse-sdk";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
 import { TOKENS, CONTRACT_ADDRESSES } from '@filoz/synapse-sdk'
@@ -14,7 +13,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
   const { data } = useCreateFlow();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-    const { address, isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
 
   const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
     useFileUpload();
@@ -83,8 +82,8 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
     try {
       const uploadResult = await uploadFile(data.encryptedFile);
       console.log(uploadResult, 'upload result');
-      
-      const fileCid = uploadResult?.pieceCid; 
+
+      const fileCid = uploadResult?.pieceCid;
       console.log('File CID:', fileCid);
 
       if (!fileCid) throw new Error("Failed to upload to Filecoin Synapse");
@@ -119,8 +118,10 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
           description: data.description,
           price: data.price,
           file_cid: fileCid,
+          encryption_key: data.encryptionKey,
           thumbnail_path: thumbnailPath,
           creator: address,
+          file_name: data.file.name
         },
       ]);
 
@@ -130,7 +131,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
       Swal.close();
       showSuccessAlert();
 
-    } catch (err:any) {
+    } catch (err: any) {
       console.error("Error confirming upload:", err);
       Swal.close();
       showErrorAlert(err.message || "Upload failed. Please try again.");
@@ -159,7 +160,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
             <span className="text-sm text-gray-400">{progress}%</span>
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">
-            <div 
+            <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             ></div>
