@@ -3,11 +3,13 @@ export default function RoadmapCard({
   title,
   description,
   status,
+  key
 }: {
   phase: string;
   title: string;
   description: string;
-  status: "Completed" | "In Progress" | "Future";
+  status: string;
+  key :number
 }) {
   const statusColor =
     status === "Completed"
