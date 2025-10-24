@@ -8,7 +8,7 @@ export default function RoadmapPage() {
       phase: "Phase 1",
       title: "Core Marketplace Launch",
       description:
-        "Establish foundational marketplace infrastructure, secure Filecoin integration for content storage, and enable basic buying/selling features.",
+        "Establish foundational marketplace infrastructure, secure OG integration for content storage, and enable basic buying/selling features.",
       status: "Completed",
     },
     {
@@ -38,7 +38,7 @@ export default function RoadmapPage() {
     {
       question: "What if storage deal expires?",
       answer:
-        "DecryptPay’s smart contracts include built-in renewal checks, automatically extending storage deals on Filecoin to ensure your content remains permanently accessible and censorship-resistant.",
+        "DecryptPay’s smart contracts include built-in renewal checks, automatically extending storage deals on OG to ensure your content remains permanently accessible and censorship-resistant.",
     },
     {
       question: "How does DecryptPay ensure content security?",
@@ -47,7 +47,7 @@ export default function RoadmapPage() {
     { question: "What are the fees for selling content?", answer: "Fees vary by transaction size and gas cost." },
     { question: "Can I sell any type of digital content?", answer: "Yes, as long as it complies with our policies." },
     { question: "How do I withdraw my earnings?", answer: "Connect your wallet and request a payout." },
-    { question: "What is Filecoin and why is it used?", answer: "Filecoin is a decentralized storage network ensuring data permanence." },
+    { question: "What is OG and why is it used?", answer: "OG is a decentralized storage network ensuring data permanence." },
   ];
 
   return (

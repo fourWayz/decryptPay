@@ -5,7 +5,7 @@ export default function Hero() {
         Trustless, Creator-First Marketplace
       </h1>
       <p className="text-lg max-w-2xl mx-auto">
-        Discover and trade digital content with unparalleled security and permanence on Filecoin.
+        Discover and trade digital content with unparalleled security and permanence on OG.
       </p>
     </section>
   );

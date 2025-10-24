@@ -13,7 +13,7 @@ export type UploadedInfo = {
 };
 
 /**
- * Hook to upload a file to the Filecoin network using Synapse.
+ * Hook to upload a file to the OG network using Synapse.
  */
 export const useFileUpload = () => {
   const [progress, setProgress] = useState(0);
@@ -31,7 +31,7 @@ export const useFileUpload = () => {
       
       setProgress(0);
       setUploadedInfo(null);
-      setStatus("🔄 Initializing file upload to Filecoin...");
+      setStatus("🔄 Initializing file upload to OG...");
 
       console.log("Starting upload process...");
 
@@ -171,7 +171,7 @@ export const useFileUpload = () => {
     onSuccess: (uploadedInfo) => {
       console.log("Upload successful with info:", uploadedInfo);
       setUploadedInfo(uploadedInfo);
-      setStatus("🎉 File successfully stored on Filecoin!");
+      setStatus("🎉 File successfully stored on OG!");
       setProgress(100);
       triggerConfetti();
     },

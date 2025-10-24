@@ -6,7 +6,6 @@ import { useCreateFlow } from "@/app/context/CreateFlowContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
-import { TOKENS, CONTRACT_ADDRESSES } from '@filoz/synapse-sdk'
 import { useFileUpload } from "@/hooks/useFileUpload";
 import Swal from 'sweetalert2';
 import { useAccount } from "wagmi";
@@ -88,7 +87,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
       const fileCid = uploadResult?.pieceCid;
       console.log('File CID:', fileCid);
 
-      if (!fileCid) throw new Error("Failed to upload to Filecoin Synapse");
+      if (!fileCid) throw new Error("Failed to upload to OG");
 
       // Update progress alert
       Swal.update({
@@ -103,7 +102,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
         `
       });
 
-      // 2️⃣ Upload thumbnail image to Supabase storage
+      // Upload thumbnail image to Supabase storage
       const fileName = `${Date.now()}-${data.image.name}`;
       const { data: storageRes, error: storageError } = await supabase.storage
         .from("thumbnails")
@@ -113,7 +112,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
 
       const thumbnailPath = storageRes.path;
 
-      // 3️⃣ Save metadata in Supabase DB
+      // Save metadata in Supabase DB
       const { error: dbError } = await supabase.from("products").insert([
         {
           title: data.title,

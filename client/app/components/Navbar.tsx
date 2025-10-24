@@ -50,7 +50,7 @@ export default function Navbar() {
       <div className="flex items-center gap-4">
         {address && (
           <span className="text-sm text-gray-300">
-            Sales Balance: <span className="text-blue-400 font-semibold">{balance} tFIL</span>
+            Sales Balance: <span className="text-blue-400 font-semibold">{balance} OG</span>
           </span>
         )}
         <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700">
