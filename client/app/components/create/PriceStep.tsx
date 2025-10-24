@@ -30,6 +30,8 @@ export default function PriceStep({ onNext, onPrev }: PriceStepProps) {
           type="number"
           placeholder="Price (OG)"
           value={data.price || ""}
+          min={0}
+          step="any"
           onChange={(e) => setData({ price: Number(e.target.value) })}
           className="w-full p-2 rounded bg-gray-800 border border-gray-700"
         />

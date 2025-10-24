@@ -80,10 +80,11 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
       formData.append("file", data.encryptedFile);
 
       const response = await fetch("/api/store", { method: "POST", body: formData });
-
+console.log(response,'res')
       if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
 
       const uploadResult = await response.json();
+      console.log(uploadResult)
       const fileCid = uploadResult?.root;
       if (!fileCid) throw new Error("Failed to upload to OG storage");
 
@@ -151,7 +152,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
       <div className="mb-6 space-y-2">
         <p><strong>Title:</strong> {data.title}</p>
         <p><strong>Description:</strong> {data.description}</p>
-        <p><strong>Price:</strong> {data.price} FIL</p>
+        <p><strong>Price:</strong> {data.price} OG</p>
         <p><strong>File:</strong> {data.file?.name}</p>
         <p><strong>Thumbnail:</strong> {data.image?.name}</p>
       </div>
