@@ -56,9 +56,10 @@ flowchart TD
     U[Buyer Wallet] -->|Browse + Select Content| UI[Next.js Frontend]
     U -->|Pay via Smart Contract| M
     M -->|Emit Purchase Event| C
-    C -->|Releases AES Key (encrypted)| U
+    C -->|Releases AES encrypted key| U
     U -->|Download Encrypted File| S
     U -->|Decrypt Locally| D[User Device]
+
 ```
 
 ---
