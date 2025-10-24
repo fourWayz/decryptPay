@@ -81,31 +81,45 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
     showProgressAlert();
 
     try {
-      const uploadResult = await uploadFile(data.encryptedFile);
+      // Create FormData for upload
+      const formData = new FormData();
+      formData.append('file', data.encryptedFile);
+
+      // Upload to your Next.js API route
+      const response = await fetch('/api/store', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const uploadResult = await response.json();
       console.log(uploadResult, 'upload result');
 
-      const fileCid = uploadResult?.pieceCid;
+      const fileCid = uploadResult?.root;
       console.log('File CID:', fileCid);
 
-      if (!fileCid) throw new Error("Failed to upload to OG");
+      if (!fileCid) throw new Error('Failed to upload to OG');
 
       // Update progress alert
       Swal.update({
         html: `
-          <div style="text-align: center;">
-            <p>📁 Uploading thumbnail to storage...</p>
-            <div style="background: #e0e0e0; border-radius: 20px; margin: 15px 0;">
-              <div style="background: #3B82F6; height: 20px; border-radius: 20px; width: 95%;"></div>
-            </div>
-            <p>95% complete</p>
-          </div>
-        `
+      <div style="text-align: center;">
+        <p>📁 Uploading thumbnail to storage...</p>
+        <div style="background: #e0e0e0; border-radius: 20px; margin: 15px 0;">
+          <div style="background: #3B82F6; height: 20px; border-radius: 20px; width: 95%;"></div>
+        </div>
+        <p>95% complete</p>
+      </div>
+    `,
       });
 
       // Upload thumbnail image to Supabase storage
       const fileName = `${Date.now()}-${data.image.name}`;
       const { data: storageRes, error: storageError } = await supabase.storage
-        .from("thumbnails")
+        .from('thumbnails')
         .upload(fileName, data.image);
 
       if (storageError) throw storageError;
@@ -113,7 +127,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
       const thumbnailPath = storageRes.path;
 
       // Save metadata in Supabase DB
-      const { error: dbError } = await supabase.from("products").insert([
+      const { error: dbError } = await supabase.from('products').insert([
         {
           title: data.title,
           description: data.description,
@@ -122,7 +136,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
           encryption_key: data.encryptionKey,
           thumbnail_path: thumbnailPath,
           creator: address,
-          file_name: data.file.name
+          file_name: data.file.name,
         },
       ]);
 
@@ -133,12 +147,13 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
       showSuccessAlert();
 
     } catch (err: any) {
-      console.error("Error confirming upload:", err);
+      console.error('Error confirming upload:', err);
       Swal.close();
-      showErrorAlert(err.message || "Upload failed. Please try again.");
+      showErrorAlert(err.message || 'Upload failed. Please try again.');
     } finally {
       setLoading(false);
     }
+
   };
 
   return (
