@@ -8,8 +8,6 @@ import { createConfig, http } from 'wagmi'
 import { filecoin, filecoinCalibration } from 'viem/chains'
 import { injected, walletConnect } from 'wagmi/connectors'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ConfettiProvider } from "@/providers/ConfettiProvider";
-import { SynapseProvider } from "@/providers/SynapseProvider";
 import 'sweetalert2/dist/sweetalert2.min.css';
 
 const queryClient = new QueryClient()
