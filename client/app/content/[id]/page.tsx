@@ -9,7 +9,6 @@ import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
 import { useAccount } from "wagmi";
-import { Synapse } from "@filoz/synapse-sdk";
 import { ethers } from "ethers";
 
 interface ContentItem {
@@ -22,7 +21,7 @@ interface ContentItem {
   thumbnail_path: string;
   file_cid: string;
   encryption_key?: string;
-  file_name? : string
+  file_name?: string
 }
 
 export default function ContentDetail({
@@ -112,28 +111,27 @@ export default function ContentDetail({
     return decryptedBuffer; // ArrayBuffer
   }
 
-  // core: download from Synapse, decrypt, return Blob
+  // download from our API route, decrypt, return Blob
   async function downloadAndDecryptBlob(fileCid: string, base64Key: string, filename?: string) {
-    // ensure window.ethereum exists
-    if (typeof window === "undefined" || !(window as any).ethereum) {
-      throw new Error("Wallet provider not found (window.ethereum)");
+    try {
+      const res = await fetch(`/api/retrieve/${fileCid}`);
+      if (!res.ok) {
+        throw new Error(`Failed to retrieve file: ${res.statusText}`);
+      }
+
+      const encryptedArrayBuffer = await res.arrayBuffer();
+
+      const decryptedArrayBuffer = await decryptBytes(new Uint8Array(encryptedArrayBuffer), base64Key);
+
+      const blob = new Blob([decryptedArrayBuffer], { type: "application/octet-stream" });
+
+      const safeName = filename || `download-${fileCid.slice(0, 6)}.bin`;
+
+      return { blob, filename: safeName };
+    } catch (err) {
+      console.error("❌ Error downloading or decrypting:", err);
+      throw new Error(err instanceof Error ? err.message : "Download/decrypt failed");
     }
-
-    // Create Synapse using the browser provider
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
-    const synapse = await Synapse.create({ provider });
-
-    // download returns Uint8Array (per your note)
-    const result: Uint8Array = await synapse.storage.download(fileCid);
-    // decrypt
-    const decryptedArrayBuffer = await decryptBytes(result, base64Key);
-
-    // create blob and return
-    const blob = new Blob([decryptedArrayBuffer], { type: "application/octet-stream" });
-
-    // filename fallback
-    const safeName = filename || `${item?.title.replace(/\s+/g, "-")}.bin`;
-    return { blob, filename: safeName };
   }
 
   // Called when user clicks View
