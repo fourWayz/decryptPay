@@ -17,7 +17,7 @@ export async function GET(
 
         const STORAGE_INDEXER = process.env.OG_INDEXER_URL;
 
-        const indexer = new Indexer(STORAGE_INDEXER);
+        const indexer = new Indexer(STORAGE_INDEXER!);
 
         const tmpDir = "/tmp/uploads";
         const filePath = join(tmpDir, `${hash}.data`);
