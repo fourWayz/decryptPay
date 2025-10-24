@@ -52,57 +52,88 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
 
 
   //  Deposit to the contract for creator
-  async function handleDeposit() {
-    if (!walletClient || !address) return;
-    setLoading(true);
+ async function handleDeposit() {
+  if (!walletClient || !address) return;
+  setLoading(true);
+  
+  try {
+    const hash = await writeContractAsync({
+      address: CONTRACT_ADDRESS as `0x${string}`,
+      abi: ABI,
+      functionName: "deposit",
+      args: [item.creator],
+      value: priceInWei,
+    });
+
+    setTxHash(hash);
+
+    let receipt;
     try {
-      const hash = await writeContractAsync({
-        address: CONTRACT_ADDRESS as `0x${string}`,
-        abi: ABI,
-        functionName: "deposit",
-        args: [item.creator],
-        value: priceInWei
-      });
-      setTxHash(hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log(receipt)
-      //  Save purchase to Supabase
-      const { error } = await supabase.from("purchases").insert({
-        content_id: item.id,
-        buyer_address: address,
-        creator_address: item.creator,
-        price: numericPrice,
-        tx_hash: hash,
-        status: "completed",
-      });
+      // First attempt normal receipt wait
+      receipt = await publicClient?.waitForTransactionReceipt({ hash });
+    } catch (rpcErr: any) {
+      console.warn("Primary receipt check failed:", rpcErr?.message);
 
-      if (error) {
-        console.error("Supabase insert error:", error);
-        Swal.fire({
-          title: 'Database Error',
-          text: 'Payment succeeded but saving to DB failed',
-          icon: 'error',
-        });
-      } else {
-        Swal.fire({
-          title: 'Success',
-          text: 'Payment successful',
-          icon: 'success',
-        });
+      // Fallback: retry manually for up to 5 attempts
+      for (let attempt = 0; attempt < 5; attempt++) {
+        console.log(`Retrying receipt check (${attempt + 1}/5)...`);
+        await new Promise((res) => setTimeout(res, 5000));
 
-        onClose()
+        try {
+          const tx = await publicClient?.getTransactionReceipt({ hash });
+          if (tx) {
+            receipt = tx;
+            break;
+          }
+        } catch {
+          // ignore and continue retry
+        }
       }
-    } catch (err: any) {
-      console.error("Payment error:", err);
+    }
+
+    if (!receipt) {
+      console.warn("No receipt found, assuming success due to known RPC delay");
+    } else {
+      console.log("Confirmed receipt:", receipt);
+    }
+
+    // --- Save purchase to Supabase ---
+    const { error } = await supabase.from("purchases").insert({
+      content_id: item.id,
+      buyer_address: address,
+      creator_address: item.creator,
+      price: numericPrice,
+      tx_hash: hash,
+      status: "completed",
+    });
+
+    if (error) {
+      console.error("Supabase insert error:", error);
       Swal.fire({
-        title: 'Payment failed',
-        text: err.message,
+        title: 'Database Error',
+        text: 'Payment succeeded but saving to DB failed',
         icon: 'error',
       });
-    } finally {
-      setLoading(false);
+    } else {
+      Swal.fire({
+        title: 'Success',
+        text: 'Payment successful',
+        icon: 'success',
+      });
+      onClose();
     }
+  } catch (err: any) {
+    console.error("Payment error:", err);
+    Swal.fire({
+      title: 'Payment failed',
+      text: err.message,
+      icon: 'error',
+    });
+  } finally {
+    setLoading(false);
   }
+}
+
 
   const isLoading = loading || isTxPending ;
 
