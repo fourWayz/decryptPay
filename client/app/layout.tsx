@@ -34,17 +34,13 @@ export default function RootLayout({
     return (
         <html lang="en" >
             <body className="bg-black">
-                <ConfettiProvider>
                     <WagmiProvider config={wagmiConfig}>
                         <QueryClientProvider client={queryClient}>
                             <RainbowKitProvider>
-                                <SynapseProvider>
                                     {children}
-                                </SynapseProvider>
                             </RainbowKitProvider>
                         </QueryClientProvider>
                     </WagmiProvider>
-                </ConfettiProvider>
             </body>
         </html>
     );

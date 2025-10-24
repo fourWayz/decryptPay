@@ -81,7 +81,7 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
   //   return match ? match[0] : "0";
   // };
   const numericPrice = item.price
-  const priceInWei = ethers.parseEther(item.price.toString()); // convert tFIL amount to wei
+  const priceInWei = ethers.parseEther(item.price.toString()); // convert og amount to wei
 
   if (!isOpen) return null;
 
@@ -204,7 +204,7 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
           <p className="text-sm text-gray-400">Content Title:</p>
           <p className="font-semibold">{item.title}</p>
           <p className="mt-2 text-sm text-gray-400">Price:</p>
-          <p className="text-blue-400">{item.price} tFIL</p>
+          <p className="text-blue-400">{item.price} OG</p>
         </div>
 
         <div className="bg-gray-800 rounded-lg p-4 mb-4">

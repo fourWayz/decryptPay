@@ -249,7 +249,7 @@ export default function ContentDetail({
             by {`${item.creator.slice(0, 6)}...${item.creator.slice(-4)}`}
           </p>
           <div className="flex gap-4 mt-4">
-            <span className="text-blue-400 font-semibold">{item.price} tFIL</span>
+            <span className="text-blue-400 font-semibold">{item.price} OG</span>
             {item.usd && <span className="text-gray-500">({item.usd})</span>}
           </div>
           <p className="mt-6 text-lg leading-relaxed text-gray-300">

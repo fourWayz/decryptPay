@@ -1,133 +1,111 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
 "use client";
 import { useState } from "react";
 import { useCreateFlow } from "@/app/context/CreateFlowContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { ethers } from "ethers";
-import { useFileUpload } from "@/hooks/useFileUpload";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import { useAccount } from "wagmi";
 
 export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
   const { data } = useCreateFlow();
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("Preparing upload...");
   const router = useRouter();
-  const { address, isConnected } = useAccount();
-
-  const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
-    useFileUpload();
-
-  const { isPending: isUploading, mutateAsync: uploadFile } =
-    uploadFileMutation;
+  const { address } = useAccount();
 
   const showSuccessAlert = () => {
     Swal.fire({
-      title: 'Success!',
-      text: 'Your content has been uploaded successfully!',
-      icon: 'success',
-      confirmButtonText: 'Awesome!',
-      confirmButtonColor: '#3B82F6',
+      title: "Success!",
+      text: "Your content has been uploaded successfully!",
+      icon: "success",
+      confirmButtonText: "Awesome!",
+      confirmButtonColor: "#3B82F6",
     }).then((result) => {
-      if (result.isConfirmed) {
-        router.push("/");
-      }
+      if (result.isConfirmed) router.push("/");
     });
   };
 
   const showErrorAlert = (errorMessage: string) => {
     Swal.fire({
-      title: 'Upload Failed',
+      title: "Upload Failed",
       text: errorMessage,
-      icon: 'error',
-      confirmButtonText: 'Try Again',
-      confirmButtonColor: '#EF4444',
+      icon: "error",
+      confirmButtonText: "Try Again",
+      confirmButtonColor: "#EF4444",
     });
   };
 
-  const showProgressAlert = () => {
+  const showProgressAlert = (message: string, percent: number) => {
     Swal.fire({
-      title: 'Uploading...',
+      title: "Uploading...",
       html: `
         <div style="text-align: center;">
-          <p>${status}</p>
+          <p>${message}</p>
           <div style="background: #e0e0e0; border-radius: 20px; margin: 15px 0;">
-            <div style="background: #3B82F6; height: 20px; border-radius: 20px; width: ${progress}%; transition: width 0.3s;"></div>
+            <div style="background: #3B82F6; height: 20px; border-radius: 20px; width: ${percent}%; transition: width 0.3s;"></div>
           </div>
-          <p>${progress}% complete</p>
+          <p>${percent}% complete</p>
         </div>
       `,
       showConfirmButton: false,
       allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
+      didOpen: () => Swal.showLoading(),
     });
   };
 
   const handleConfirm = async () => {
     if (!data.encryptedFile || !data.file || !data.image) {
       Swal.fire({
-        title: 'Missing Files',
-        text: 'Please make sure all files are selected',
-        icon: 'warning',
-        confirmButtonText: 'OK'
+        title: "Missing Files",
+        text: "Please make sure all files are selected",
+        icon: "warning",
+        confirmButtonText: "OK",
       });
       return;
     }
 
     setLoading(true);
-    showProgressAlert();
+    setProgress(0);
+    setStatus("Starting upload...");
+    showProgressAlert("Initializing upload...", 0);
 
     try {
-      // Create FormData for upload
+      // Step 1: Upload encrypted file to /api/store
+      setStatus("Uploading encrypted file to OG...");
+      setProgress(40);
+      Swal.update({ html: generateProgressHTML("Uploading encrypted file...", 40) });
+
       const formData = new FormData();
-      formData.append('file', data.encryptedFile);
+      formData.append("file", data.encryptedFile);
 
-      // Upload to your Next.js API route
-      const response = await fetch('/api/store', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch("/api/store", { method: "POST", body: formData });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
 
       const uploadResult = await response.json();
-      console.log(uploadResult, 'upload result');
-
       const fileCid = uploadResult?.root;
-      console.log('File CID:', fileCid);
+      if (!fileCid) throw new Error("Failed to upload to OG storage");
 
-      if (!fileCid) throw new Error('Failed to upload to OG');
+      setStatus("Uploading thumbnail...");
+      setProgress(70);
+      Swal.update({ html: generateProgressHTML("📁 Uploading thumbnail to storage...", 70) });
 
-      // Update progress alert
-      Swal.update({
-        html: `
-      <div style="text-align: center;">
-        <p>📁 Uploading thumbnail to storage...</p>
-        <div style="background: #e0e0e0; border-radius: 20px; margin: 15px 0;">
-          <div style="background: #3B82F6; height: 20px; border-radius: 20px; width: 95%;"></div>
-        </div>
-        <p>95% complete</p>
-      </div>
-    `,
-      });
-
-      // Upload thumbnail image to Supabase storage
+      // Step 2: Upload thumbnail image to Supabase
       const fileName = `${Date.now()}-${data.image.name}`;
       const { data: storageRes, error: storageError } = await supabase.storage
-        .from('thumbnails')
+        .from("thumbnails")
         .upload(fileName, data.image);
-
       if (storageError) throw storageError;
 
       const thumbnailPath = storageRes.path;
 
-      // Save metadata in Supabase DB
-      const { error: dbError } = await supabase.from('products').insert([
+      // Step 3: Save metadata to Supabase
+      setStatus("Saving product metadata...");
+      setProgress(90);
+      Swal.update({ html: generateProgressHTML("Saving metadata to database...", 90) });
+
+      const { error: dbError } = await supabase.from("products").insert([
         {
           title: data.title,
           description: data.description,
@@ -142,19 +120,29 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
 
       if (dbError) throw dbError;
 
-      // Close progress alert and show success
+      setProgress(100);
+      Swal.update({ html: generateProgressHTML("✅ Finalizing upload...", 100) });
+
       Swal.close();
       showSuccessAlert();
-
     } catch (err: any) {
-      console.error('Error confirming upload:', err);
+      console.error("Error confirming upload:", err);
       Swal.close();
-      showErrorAlert(err.message || 'Upload failed. Please try again.');
+      showErrorAlert(err.message || "Upload failed. Please try again.");
     } finally {
       setLoading(false);
     }
-
   };
+
+  const generateProgressHTML = (message: string, percent: number) => `
+    <div style="text-align: center;">
+      <p>${message}</p>
+      <div style="background: #e0e0e0; border-radius: 20px; margin: 15px 0;">
+        <div style="background: #3B82F6; height: 20px; border-radius: 20px; width: ${percent}%; transition: width 0.3s;"></div>
+      </div>
+      <p>${percent}% complete</p>
+    </div>
+  `;
 
   return (
     <div className="bg-gray-900 p-6 rounded-lg">
@@ -168,8 +156,7 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
         <p><strong>Thumbnail:</strong> {data.image?.name}</p>
       </div>
 
-      {/* Upload Progress Display */}
-      {(isUploading || loading) && (
+      {loading && (
         <div className="mb-4 p-4 bg-gray-800 rounded-lg">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium">{status}</span>
@@ -188,22 +175,22 @@ export default function ConfirmStep({ onPrev }: { onPrev: () => void }) {
         <button
           onClick={onPrev}
           className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-50"
-          disabled={isUploading || loading}
+          disabled={loading}
         >
           Back
         </button>
         <button
           onClick={handleConfirm}
           className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
-          disabled={isUploading || loading}
+          disabled={loading}
         >
-          {isUploading || loading ? (
+          {loading ? (
             <>
               <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {status || "Uploading..."}
+              {status}
             </>
           ) : (
             "Confirm & Upload"

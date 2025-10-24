@@ -92,7 +92,7 @@ export default function ContentCard({
         )}
 
         <p className="text-blue-400 font-medium">
-          {price} tFIL {usd && <span className="text-gray-400">({usd})</span>}
+          {price} OG {usd && <span className="text-gray-400">({usd})</span>}
         </p>
       </Link>
 
