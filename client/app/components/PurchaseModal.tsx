@@ -11,14 +11,12 @@ import {
 } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ethers } from "ethers";
-import FilecoinPayABI from "@/lib/abi.json";
+import ABI from "@/lib/abi.json";
 import { supabase } from "@/lib/supabaseClient";
-import { Address } from "viem";
 import Swal from 'sweetalert2';
 
 
-const CONTRACT_ADDRESS = "0xEC9c324a6136B055eC653a15A9116f77cc152f26"; // Payments contract on Calibration
-const TOKEN_ADDRESS = "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0"; // USDFC ERC20
+const CONTRACT_ADDRESS = "0x666788808eE647f2fFeC1FBe6bedf7c378f93159"; // Payments contract 
 
 type PurchaseModalProps = {
   isOpen: boolean;
@@ -42,93 +40,16 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
 
   const [txHash, setTxHash] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [approvalHash, setApprovalHash] = useState<string | null>(null);
-  const [isApproved, setIsApproved] = useState(false);
 
   const { isLoading: isTxPending } = useWaitForTransactionReceipt({
     hash: txHash as `0x${string}`,
   });
 
-  const { isLoading: isApprovalPending } = useWaitForTransactionReceipt({
-    hash: approvalHash as `0x${string}`,
-  });
-
-  // Check current allowance
-  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
-    address: ethers.ZeroAddress as Address,
-    abi: [
-      {
-        name: "allowance",
-        type: "function",
-        stateMutability: "view",
-        inputs: [
-          { name: "owner", type: "address" },
-          { name: "spender", type: "address" },
-        ],
-        outputs: [{ name: "", type: "uint256" }],
-      },
-    ],
-    functionName: "allowance",
-    args: [address as `0x${string}`, CONTRACT_ADDRESS as `0x${string}`],
-    query: {
-      enabled: !!address && isOpen,
-    },
-  });
-
-  // // Extract numeric price
-  // const extractNumericValue = (priceString: string): string => {
-  //   const match = priceString.match(/(\d+\.?\d*)/);
-  //   return match ? match[0] : "0";
-  // };
   const numericPrice = item.price
   const priceInWei = ethers.parseEther(item.price.toString()); // convert og amount to wei
 
   if (!isOpen) return null;
 
-
-  // Approve tokens
-  async function handleApprove() {
-    if (!walletClient || !address) return;
-    setLoading(true);
-    try {
-      const hash = await writeContractAsync({
-        address: ethers.ZeroAddress as Address,
-        abi: [
-
-          {
-            name: "approve",
-            type: "function",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "spender", type: "address" },
-              { name: "amount", type: "uint256" },
-            ],
-            outputs: [{ name: "", type: "bool" }],
-          },
-        ],
-        functionName: "approve",
-        args: [CONTRACT_ADDRESS, priceInWei],
-      });
-      setApprovalHash(hash);
-      await publicClient?.waitForTransactionReceipt({ hash });
-      setIsApproved(true)
-      await refetchAllowance(); // Refresh allowance after approval
-      Swal.fire({
-        title: 'Success',
-        text: 'Approval successful',
-        icon: 'success',
-      });
-    } catch (err: any) {
-      console.error("Approval error:", err);
-      Swal.fire({
-        title: 'Approval failed',
-        text: err.message,
-        icon: 'error',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
 
   //  Deposit to the contract for creator
   async function handleDeposit() {
@@ -137,9 +58,9 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
     try {
       const hash = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
-        abi: FilecoinPayABI,
+        abi: ABI,
         functionName: "deposit",
-        args: [ethers.ZeroAddress, item.creator, priceInWei],
+        args: [item.creator],
         value: priceInWei
       });
       setTxHash(hash);
@@ -183,7 +104,7 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
     }
   }
 
-  const isLoading = loading || isTxPending || isApprovalPending;
+  const isLoading = loading || isTxPending ;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -225,14 +146,12 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
               ? "🔄 Processing…"
               : txHash
                 ? "✅ Payment complete"
-                : isApproved
-                  ? "✅ Approved - Ready to pay"
-                  : "Ready to approve and deposit"}
+                  : "Ready to deposit"}
           </p>
           {txHash && (
             <p className="text-blue-400 text-xs mt-2">
               <a
-                href={`https://calibration.filfox.info/en/message/${txHash}`}
+                href={`http://chainscan-galileo.0g.ai/tx/${txHash}`}
                 target="_blank"
                 className="underline"
               >
@@ -255,15 +174,8 @@ export default function PurchaseModal({ isOpen, onClose, item }: PurchaseModalPr
           ) : (
             <>
               <button
-                onClick={handleApprove}
-                disabled={isLoading || isApproved}
-                className="bg-purple-600 px-6 py-2 rounded-lg hover:bg-purple-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
-              >
-                {isApproved ? "Approved" : "Approve"}
-              </button>
-              <button
                 onClick={handleDeposit}
-                disabled={isLoading || !isApproved}
+                disabled={isLoading}
                 className="bg-blue-600 px-6 py-2 rounded-lg hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
               >
                 Pay
